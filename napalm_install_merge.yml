@@ -1,0 +1,20 @@
+---
+- name: NAPALM gather information on IOS
+  hosts: 10.1.151.10
+  
+  tasks:
+
+  - name: Install Config and save diff
+    napalm_install_config:
+      hostname: '{{ inventory_hostname }}'
+      username: admin
+      password: riverbed
+#      optional_args: {'secret': 'riverbed', 'inline_transfer': 'True'}
+      optional_args: {'secret': 'riverbed', 'inline_transfer': 'True', 'global_delay_factor': 2}
+      dev_os: ios
+      config_file: '{{ config_file }}'
+      replace_config: 'False'
+      commit_changes: 'True'
+      archive_file: 'True'
+      get_diffs: 'True'
+      diff_file: 'diff.txt'
