@@ -98,9 +98,9 @@
       state: directory
     register: myfilelocation
   - debug:
-      msg: "{{ myfilelocation }}"
+      msg: "{{ myfilelocation.path }}"
 
-  - shell: ls -lstr {{ myfilelocation }}/main_full_section_replace.yml
+  - shell: ls -lstr {{ myfilelocation.path }}/main_full_section_replace.yml
     register: myfile
   - debug:
       msg: "{{ myfile }}"
