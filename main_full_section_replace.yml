@@ -96,7 +96,7 @@
     file:
       path: /var/lib/awx/projects/_16__ansible_full_section_replace
       state: directory
-      register: myfilelocation
+    register: myfilelocation
   - debug:
       msg: "{{ myfilelocation }}"
 
