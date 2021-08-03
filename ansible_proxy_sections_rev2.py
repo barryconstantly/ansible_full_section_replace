@@ -41,21 +41,13 @@ def rollback():
 	print('Cleared device archived file path is ' + device_archive_file_path)
 	
 	##### This is the real REST API approach, commented out for command line main.yml testing ####
-	#tower_template_id = nru.get_tower_template_ids(session)
-	#print('TOWER Template ID is ' + str(tower_template_id))
-	## Need to also add full_rollback variable into the execute_tower_template function
-	#nru.execute_tower_template(tower_template_id, dev_name, device_archive_file_path, session)
-	
-	##############   This is the Ansible command line solution to pass variables ################
-	dev_file = open('dev_file.txt','w')
-	dev_file.write(dev_id + '\n')
-	dev_file.write(device_archive_file_path + '\n')
-	# True means execute full rollback, False = merge (napalm variable)
-	dev_file.write("'True'" + '\n')
-	dev_file.close()
-	ansible_rollback_cmd = 'ansible-playbook main-command-line.yml'
-	print(ansible_rollback_cmd)
-	os.system(ansible_rollback_cmd)
+	#TOWER_TEMPLATE_NAME = 'NetIM-Rollback-Job-Template'
+	TOWER_TEMPLATE_NAME = 'NetIM-Full-Section-Rollback'
+	tower_template_id = nru.get_tower_template_ids(session,TOWER_TEMPLATE_NAME)
+	print('TOWER Template ID is ' + str(tower_template_id))
+	# Full means execute full rollback, Section = merge (napalm variable)
+	full_rollback = 'Full'
+	nru.execute_tower_template(tower_template_id, dev_name, device_archive_file_path, full_rollback, session)
 	return render_template('index_photo.html')
 
 # This is section rollback external link from NetIM
@@ -159,18 +151,15 @@ def rollback_section():
 		nru.create_config_merge_file(keyword_dict,selected_rows,web_page_diff_list)
 		
 		##### This is the real REST API approach, commented out for command line main.yml testing ####
-		#tower_template_id = nru.get_tower_template_ids(session)
-		#print('TOWER Template ID is ' + str(tower_template_id))
-		## Need to also add full_rollback variable into the execute_tower_template function
-		#nru.execute_tower_template(tower_template_id, dev_name, device_archive_file_path, session)
-
-		# This is to test Ansible playbook for install merge, it will run on Tower, but for now run command line by Flask
-		# In the real script, need to fetch the Template ID and then execute same way as full rollback (pass device name and rollback variable 
-		# False in this case since True = full rollback, False = section rollback
-		ansible_merge_cmd = 'ansible-playbook main-command-line.yml'
-#		ansible_merge_cmd = 'ansible-playbook napalm_install_merge.yml -e config_file=\'config_merge_file.txt\''
-		print(ansible_merge_cmd)
-		os.system(ansible_merge_cmd)
+		TOWER_TEMPLATE_NAME = 'NetIM-Full-Section-Rollback'
+		session = requests.session()
+		tower_template_id = nru.get_tower_template_ids(session,TOWER_TEMPLATE_NAME)
+		print('TOWER Template ID is ' + str(tower_template_id))
+		# True means execute full rollback, False = merge (napalm variable)
+		full_rollback = 'Section'
+		dev_name = 'null_name'
+		device_archive_file_path = 'null_path'
+		nru.execute_tower_template(tower_template_id, dev_name, device_archive_file_path, full_rollback, session)
 		submission_successful = True
 	return render_template('index.html', lines = web_page_diff_list, submission_successful=submission_successful)
 	
