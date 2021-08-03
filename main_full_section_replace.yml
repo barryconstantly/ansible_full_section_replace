@@ -100,10 +100,10 @@
   - debug:
       msg: "{{ myfilelocation }}"
 
-#  - shell: ls -lstr /var/lib/awx/projects/_16__ansible_full_section_replace/main_full_section_replace.yml
-#    register: myfile
-#  - debug:
-#      msg: "{{ myfile }}"
+  - shell: ls -lstr {{ myfilelocation }}/main_full_section_replace.yml
+    register: myfile
+  - debug:
+      msg: "{{ myfile }}"
 
   - name: Install Section Rollback Config and save diff
     when: 
