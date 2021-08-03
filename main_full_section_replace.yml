@@ -7,31 +7,6 @@
 # ansible-playbook main-command-line.yml --extra-var "dev_name=15027  device_archive_file_path=/api/netim/v1/archives/282059/file"
 
   tasks:
-  - name: Read the file contents
-#    when: "'NetIMGroup' in group_names"
-    command: cat dev_file.txt
-    register: my_items
-  
-  - name: Set variables from the config file registered output
-    set_fact:
-      device_name: "{{ my_items.stdout_lines[0]}}"
-      dev_archive_path: "{{ my_items.stdout_lines[1]}}"
-      full_rollback: "{{ my_items.stdout_lines[2]}}"
-      
-  - name: Output my_items
-    when: 
-      - "'NetIMGroup' in group_names"
-      - "{{ full_rollback }} == 'True'"
-    debug:
-      msg: 
-        - "Device name is {{ my_items.stdout_lines[0]}}"
-        - "Device archive file path is {{ my_items.stdout_lines[1]}}"
-        - "Full rollback variable is {{ full_rollback }}"
-#        - "Full rollback variable is {{ my_items.stdout_lines[2]}}"
-
-##  - meta: end_play
-        
-    # debug: prints to Ansible command line screen
   - name: NetIM Full Rollback Request Debug message
     when:
       - "'NetIMGroup' in group_names"
@@ -54,7 +29,7 @@
       - "{{ full_rollback }} == 'True'"
     uri:
       # deviced_archive_file_path looks like this '/api/netim/v1/archives/281533/file'
-      url: "https://10.1.150.232:8543 {{my_items.stdout_lines[1]}} "
+      url: "https://10.1.150.232:8543 {{device_archive_file_path}} "
       method: GET
       url_username: scadmin
       url_password: R3st0nVA
@@ -74,7 +49,7 @@
   - name: Config file debug output for Full Rollback
     when:
       - "'NetIMGroup' in group_names"
-      - "{{ my_items.stdout_lines[2]}} == 'True'"
+      - "{{ full_rollback }} == 'True'"
     debug:
       msg: "The output of the config file is {{lookup('file', './config_orig.txt') }}"
 
