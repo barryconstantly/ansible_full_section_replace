@@ -117,7 +117,7 @@
 #      optional_args: {'secret': 'riverbed', 'inline_transfer': 'True'}
       optional_args: {'secret': 'riverbed', 'inline_transfer': 'True', 'global_delay_factor': 2}
       dev_os: ios
-      config_file: 'config_merge_file.txt'
+      config_file: '/tmp/config_merge_file.txt'
 #      config_file: '/home/centos/flask/config_merge_file.txt'
       replace_config: 'False'
       commit_changes: 'True'
