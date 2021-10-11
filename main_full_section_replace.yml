@@ -1,0 +1,139 @@
+---
+- name: NetIM Full and Section Rollback Playbook
+  hosts: netim:{{ dev_name }}
+  gather_facts: no
+  vars: 
+      full_section: "{{ full_rollback }}"
+# Remember to run a playbook command line and pass arguments, looks something like this
+# ansible-playbook main-command-line.yml --extra-var "dev_name=15027  device_archive_file_path=/api/netim/v1/archives/282059/file"
+
+  tasks:
+  - name: NetIM Full Rollback Request Debug message
+    when:
+      - "'NetIMGroup' in group_names"
+      - "full_section == 'Full'"
+    debug:
+      msg:
+        - "NetIM Requested a Rollback for {{ dev_name }}, will retrieve the previous config file"
+        - "from this NetIM path {{device_archive_file_path}}"
+
+  - name: Retrieve Full Rollback Config File from NetIM (to NetIM REST API)
+    when:
+      - "'NetIMGroup' in group_names"
+      - "full_section == 'Full'"
+    debug:
+      msg: "Retrieved previous config file from NetIM for {{ dev_name }}"
+
+  - name: Access NetIM REST API to retrieve Full config file
+    when:
+      - "'NetIMGroup' in group_names"
+      - "full_section == 'Full'"
+    uri:
+      # deviced_archive_file_path looks like this '/api/netim/v1/archives/281533/file'
+      url: "https://10.1.150.232:8543 {{device_archive_file_path}} "
+      method: GET
+      url_username: scadmin
+      url_password: R3st0nVA
+      force_basic_auth: yes
+      validate_certs: no
+      # This forces content to be returned, if not specified and JSON is present, then JSON will be returned
+      return_content: yes
+      status_code: 200
+      # This writes the output to a file named 'config.txt
+     # Since this AWX and Docker, the actual location is in a Docker folder somewhere..
+      dest: ./config_orig.txt
+    # Ansible uses register to specify a variable name and it is implicit to the output of the uri:
+    # Notice it is NOT indented, at same indent level as uri:
+    register: rest_get
+
+  # This is debug test to see the config file text on the Ansible console screen
+  - name: Config file debug output for Full Rollback
+    when:
+      - "'NetIMGroup' in group_names"
+      - "full_section == 'Full'"
+    debug:
+      msg: "The output of the config file is {{lookup('file', './config_orig.txt') }}"
+
+
+  # I got frustrated trying to read in the file and parse with Ansible so cheating with Python..
+  - name: Remove some lines from the config file (header and footer)
+    when:
+      - "'NetIMGroup' in group_names"
+      - "full_section == 'Full'"
+    script: "/usr/bin/python3 config_strip.py"
+    
+  - name: Display the scrubbed output of the config file
+    when:
+      - "'NetIMGroup' in group_names"
+      - "full_section == 'Full'"
+    debug:
+      msg: "The scrubbed output of the config file is {{lookup('file', './config_scrubbed.txt') }}"
+
+########  Only for Cisco host ##########
+# This is elevated enable mode, note that the other script with 'show run' works which also uses
+# elevated mode..
+# Flask will set "True" / "False" depending upon whether it was full-rollback or section-rollback route.  I tried to pass a varaible to
+# replace_config, but this kept blowing up so I created 2 separate tasks
+  - name: Install Entire Rollback Config and save diff
+    when: 
+      - "'Cisco' in group_names"
+      - "full_section == 'Full'"
+    napalm_install_config:
+      hostname: '{{ dev_name }}'
+      username: admin
+      password: riverbed
+#      optional_args: {'secret': 'riverbed', 'inline_transfer': 'True'}
+      optional_args: {'secret': 'riverbed', 'inline_transfer': 'True', 'global_delay_factor': 4, 'session_log':'/tmp/{{ inventory_hostname}}_napalm.log'}
+      dev_os: ios
+      config_file: 'config_scrubbed.txt'
+      replace_config: 'True'
+      commit_changes: 'True'
+      archive_file: 'True'
+      get_diffs: 'True'
+      diff_file: 'diff.txt'
+
+# This was when I troubleshot the protected mode
+  # - name: Locate a file
+    # file:
+      # path: /var/lib/awx/projects/_16__ansible_full_section_replace
+      # state: directory
+    # register: myfilelocation
+  # - debug:
+      # msg: "{{ myfilelocation.path }}"
+
+  # - shell: ls -lstr {{ myfilelocation.path }}/main_full_section_replace.yml
+    # register: myfile
+  # - debug:
+      # msg: "{{ myfile }}"
+
+  - name: Install Section Rollback Config and save diff
+    when: 
+      - "'Cisco' in group_names"
+      - "full_section == 'Section'"
+    napalm_install_config:
+      hostname: '{{ dev_name }}'
+      username: admin
+      password: riverbed
+#      optional_args: {'secret': 'riverbed', 'inline_transfer': 'True'}
+      optional_args: {'secret': 'riverbed', 'inline_transfer': 'True', 'global_delay_factor': 4, 'session_log':'/tmp/{{ inventory_hostname}}_napalm.log'}
+      dev_os: ios
+      config_file: '/tmp/config_merge_file.txt'
+#      config_file: '/home/centos/flask/config_merge_file.txt'
+      replace_config: 'False'
+      commit_changes: 'True'
+      archive_file: 'True'
+      get_diffs: 'True'
+      diff_file: 'diff.txt'
+      
+  - name: Read Cisco IOS running-config
+    when: "'Cisco' in group_names"
+    ios_config:
+      backup: yes
+      backup_options:
+        filename: Mid-backup.txt
+    register: backup_contents
+    
+  - name: Output running config to screen
+    when: "'Cisco' in group_names"
+    debug:
+      msg: "The contents of the rolled-back config file are {{ lookup('file','backup/Mid-backup.txt') }} "
